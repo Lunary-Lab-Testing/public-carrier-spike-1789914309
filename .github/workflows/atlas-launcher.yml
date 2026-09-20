@@ -1,0 +1,21 @@
+name: Atlas launcher integration
+on:
+  workflow_dispatch:
+    inputs:
+      endpoint:
+        description: Atlas carrier endpoint
+        required: true
+      ticket:
+        description: Opaque ticket
+        required: true
+permissions:
+  contents: read
+jobs:
+  launcher:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - uses: Lunary-Lab-Testing/public-carrier-spike-1789914309/.github/actions/atlas-launcher@main
+        with:
+          endpoint: ${{ inputs.endpoint }}
+          ticket: ${{ inputs.ticket }}

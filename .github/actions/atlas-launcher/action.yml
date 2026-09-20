@@ -1,0 +1,37 @@
+name: Atlas Private CI Launcher
+
+description: Generic launcher contract for an approved Atlas private-CI deployment
+inputs:
+  endpoint:
+    description: HTTPS Atlas carrier endpoint
+    required: true
+  ticket:
+    description: Opaque single-run locator; never a bearer credential
+    required: true
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -euo pipefail
+        case "$ATLAS_ENDPOINT" in
+          https://*) ;;
+          *) echo 'Atlas launcher rejected non-HTTPS endpoint' >&2; exit 2 ;;
+        esac
+        case "$ATLAS_TICKET" in
+          ''|*[!A-Za-z0-9._-]*) echo 'Atlas launcher rejected malformed ticket' >&2; exit 2 ;;
+        esac
+        for _ in $(seq 1 180); do
+          status=$(curl --fail --silent --show-error --request POST --header 'Content-Type: application/json' --data "$(jq -cn --arg ticket "$ATLAS_TICKET" '{ticket:$ticket}')" "$ATLAS_ENDPOINT/v1/carrier/result" | jq -r '.status // empty') || status=''
+          case "$status" in
+            succeeded) echo 'Atlas carrier execution succeeded.'; exit 0 ;;
+            failed|cancelled|expired) echo "Atlas carrier execution $status." >&2; exit 1 ;;
+            running|dispatched|uploading) sleep 2 ;;
+            *) echo 'Atlas carrier returned an unknown status.' >&2; exit 2 ;;
+          esac
+        done
+        echo 'Atlas carrier polling timed out.' >&2
+        exit 1
+      env:
+        ATLAS_ENDPOINT: ${{ inputs.endpoint }}
+        ATLAS_TICKET: ${{ inputs.ticket }}
