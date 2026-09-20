@@ -1,0 +1,12 @@
+name: Atlas carrier eligibility probe
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - run: echo ATLAS_PUBLIC_CARRIER_PROBE=OK
